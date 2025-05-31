@@ -16,15 +16,45 @@ class Review:
         if not Employee.find_by_id(employee_id):
             raise ValueError(f"No Employee found with id {employee_id}")
         self.id = id
-        self.year = year
-        self.summary = summary
-        self.employee_id = employee_id
+        self._year = year
+        self._summary = summary
+        self._employee_id = employee_id
 
     def __repr__(self):
         return (
             f"<Review {self.id}: {self.year}, {self.summary}, "
             + f"Employee: {self.employee_id}>"
         )
+
+    @property
+    def year(self):
+        return self._year
+
+    @year.setter
+    def year(self, value):
+        if not isinstance(value, int) or value < 2000:
+            raise ValueError("Year must be an integer >= 2000")
+        self._year = value
+
+    @property
+    def summary(self):
+        return self._summary
+
+    @summary.setter
+    def summary(self, value):
+        if not value or not isinstance(value, str):
+            raise ValueError("Summary must be a non-empty string")
+        self._summary = value
+
+    @property
+    def employee_id(self):
+        return self._employee_id
+
+    @employee_id.setter
+    def employee_id(self, value):
+        if not Employee.find_by_id(value):
+            raise ValueError(f"No Employee found with id {value}")
+        self._employee_id = value
 
     @classmethod
     def create_table(cls):
