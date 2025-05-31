@@ -9,6 +9,12 @@ class Review:
     all = {}
 
     def __init__(self, year, summary, employee_id, id=None):
+        if not isinstance(year, int) or year < 2000:
+            raise ValueError("Year must be an integer >= 2000")
+        if not summary or not isinstance(summary, str):
+            raise ValueError("Summary must be a non-empty string")
+        if not Employee.find_by_id(employee_id):
+            raise ValueError(f"No Employee found with id {employee_id}")
         self.id = id
         self.year = year
         self.summary = summary
@@ -25,11 +31,12 @@ class Review:
         """ Create a new table to persist the attributes of Review instances """
         sql = """
             CREATE TABLE IF NOT EXISTS reviews (
-            id INTEGER PRIMARY KEY,
-            year INT,
-            summary TEXT,
-            employee_id INTEGER,
-            FOREIGN KEY (employee_id) REFERENCES employee(id))
+                id INTEGER PRIMARY KEY,
+                year INT,
+                summary TEXT,
+                employee_id INTEGER,
+                FOREIGN KEY (employee_id) REFERENCES employees(id)
+            )
         """
         CURSOR.execute(sql)
         CONN.commit()
@@ -59,11 +66,29 @@ class Review:
 
     @classmethod
     def create(cls, year, summary, employee_id):
-        """Initialize a new Review instance and save the object to the database. Return the new instance."""
-        review = cls(year, summary, employee_id)
-        review.save()
+        # Validate inputs
+        if not isinstance(year, int) or year < 2000:
+            raise ValueError("Year must be an integer >= 2000")
+        if not summary or not isinstance(summary, str):
+            raise ValueError("Summary must be a non-empty string")
+        if not Employee.find_by_id(employee_id):
+            raise ValueError(f"No Employee found with id {employee_id}")
+
+        # Insert into DB
+        sql = """
+            INSERT INTO reviews (year, summary, employee_id)
+            VALUES (?, ?, ?)
+        """
+        CURSOR.execute(sql, (year, summary, employee_id))
+        CONN.commit()
+
+        # Get last inserted id
+        review_id = CURSOR.lastrowid
+
+        # Return instance created with these values
+        review = cls(year, summary, employee_id, review_id)
+        cls.all[review_id] = review
         return review
-    
 
     @classmethod
     def instance_from_db(cls, row):
@@ -72,19 +97,16 @@ class Review:
             return None
         id = row[0]
         if id in cls.all:
-        # Update cached instance with fresh data from DB row
+            # Update cached instance with fresh data from DB row
             review = cls.all[id]
             review.year = row[1]
             review.summary = row[2]
             review.employee_id = row[3]
             return review
-    # Create new instance from row and cache it
-        review = cls(row[1], row[2], row[3], id=id)
+        # Create new instance from row and cache it
+        review = cls(row[1], row[2], row[3], row[0])
         cls.all[id] = review
         return review
-
-
-    
 
     @classmethod
     def find_by_id(cls, id):
